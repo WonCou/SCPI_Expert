@@ -339,12 +339,3 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database 
 healthchecksdb
-
-#ignore these files
-.vs/
-Debug/
-UATS/**/Debug
-**/UATS/Config/
-**/UATS/obj/x86/Debug/
-UATS.csproj.GenerateResource.Cache
-UATS/Config/ProjectPathConfig.xml
