@@ -36,6 +36,5 @@ namespace SCPI_Expert
 
         #endregion
 
-
     }
 }

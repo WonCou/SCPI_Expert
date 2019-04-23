@@ -33,7 +33,6 @@ namespace SCPI_Expert
             this.connect = this.connectInstru;
         }
 
-
         /// <summary>
         /// 窗口加载
         /// </summary>
@@ -45,7 +44,6 @@ namespace SCPI_Expert
             btnRead.Enabled = false;
             btnSR.Enabled = false;
         }
-
 
         /// <summary>
         /// 点击连接按钮
