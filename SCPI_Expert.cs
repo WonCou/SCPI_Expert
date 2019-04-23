@@ -21,6 +21,8 @@ namespace SCPI_Expert
         public delegate void connectDelegate(); //定义一个connectDelegate()的委托
         private connectDelegate connect; //再定义一个委托变量
         private delegate void AddMsg(string msg);
+        private delegate void ChangeEventConnect();
+        private delegate void ChangeEventDisconnect();
 
         /// <summary>
         /// 初始化组件
@@ -59,21 +61,6 @@ namespace SCPI_Expert
         }
         int id = 0;
 
-
-        /// <summary>
-        /// 这里是后台线程，是在另一个线程上完成的
-        /// 这里是真正做事的工作线程
-        /// 可以在这里做一些费时的，复杂的操作
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void bw_DoWork(object sender, DoWorkEventArgs e)
-        {
-            Thread.Sleep(2000);
-            e.Result = e.Argument + "工作线程完成";
-        }
-        
-
         /// <summary>
         /// 连接设备方法
         /// </summary>
@@ -81,13 +68,23 @@ namespace SCPI_Expert
         {
             try
             {
-                string msg = "*[" + DateTime.Now.ToString() + "] " + "Start connecting...";
-                ShowMsg(msg);
-                ShowFrmWaiting();
                 if (btnConnect.Text == "Connect")
+                {
+                    string msg = "*[" + DateTime.Now.ToString() + "] " + "Start connecting...";
+                    ShowMsg(msg);
+                    ShowFrmWaiting();
                     connectDevice(txbAddress.Text);
-                else
+                    doConn();
+                }
+                else if (btnConnect.Text == "Disconnect")
+                {
+                    string msg = "*[" + DateTime.Now.ToString() + "] " + "Start disconnecting...";
+                    ShowMsg(msg);
+                    ShowFrmWaiting();
                     Disconnect();
+                    CloseConn();
+                }
+                else { }
                 HideFrmWaiting();
             }
             catch (Exception)
@@ -98,6 +95,53 @@ namespace SCPI_Expert
             }
         }
 
+        /// <summary>
+        /// 执行连接仪器
+        /// </summary>
+        private void doConn()
+        {
+            if (this.InvokeRequired)
+                this.BeginInvoke(new ChangeEventConnect(this.doConn_Bkgrd), new object[] { });
+            else
+                doConn_Bkgrd();
+        }
+
+        /// <summary>
+        /// 这里是后台线程，是在另一个线程上完成的
+        /// 这里是真正做事的工作线程
+        /// 可以在这里做一些费时的，复杂的操作
+        /// </summary>
+        private void doConn_Bkgrd()
+        {
+            btnSend.Enabled = true;
+            btnRead.Enabled = true;
+            btnSR.Enabled = true;
+            btnConnect.Text = "Disconnect";
+            lblStatus.Text = "Connected to " + txbAddress.Text + "!";
+        }
+
+        /// <summary>
+        /// 执行断开仪器
+        /// </summary>
+        private void CloseConn()
+        {
+            if (this.InvokeRequired)
+                this.BeginInvoke(new ChangeEventConnect(this.bw_CloseConn), new object[] { });
+            else
+                bw_CloseConn();
+        }
+
+        /// <summary>
+        /// 这里是后台线程，是在另一个线程上完成的
+        /// 这里是真正做事的工作线程
+        /// 可以在这里做一些费时的，复杂的操作
+        /// </summary>
+        private void bw_CloseConn()
+        {
+            btnConnect.Text = "Connect";
+            lblStatus.Text = "Disconnected";
+            btnConnect.Enabled = true;
+        }
 
         /// <summary>
         /// 显示消息
@@ -106,15 +150,10 @@ namespace SCPI_Expert
         private void ShowMsg(string msg)
         {
             if (this.InvokeRequired)
-            {
                 this.BeginInvoke(new AddMsg(this.AddMsgFun), new object[] { msg });
-            }
             else
-            {
                 AddMsgFun(msg);
-            }
         }
-
 
         /// <summary>
         /// 添加消息到ListBox中
@@ -126,7 +165,6 @@ namespace SCPI_Expert
             this.lbxReception.SelectedIndex = 0;
             this.lbxReception.Text = msg;
         }
-    
 
         /// <summary>
         /// 清空日志框
@@ -139,7 +177,6 @@ namespace SCPI_Expert
             lbxReception.Refresh();
         }
 
-
         /// <summary>
         /// 点击发送按钮
         /// </summary>
@@ -149,7 +186,6 @@ namespace SCPI_Expert
         {
             Send(cmbSend.Text);
         }
-
 
         /// <summary>
         /// 点击接收按钮
@@ -161,7 +197,6 @@ namespace SCPI_Expert
             Query(cmbSend.Text);
         }
 
-
         /// <summary>
         /// 点击发送并接收按钮
         /// </summary>
@@ -172,7 +207,6 @@ namespace SCPI_Expert
             Send(cmbSend.Text);
             Query(cmbSend.Text);
         }
-
 
         /// <summary>
         /// 获取频谱仪Trace
@@ -192,9 +226,7 @@ namespace SCPI_Expert
             {
                 lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Can't read trace!:lvi.Visa.");
             }
-
         }
-
 
         /// <summary>
         /// 指令发送框下拉菜单事件
@@ -222,7 +254,6 @@ namespace SCPI_Expert
 
         }
 
-
         /// <summary>
         /// 使用lvi.Visa库中的类打开与设备的会话(方式1)
         /// </summary>
@@ -231,27 +262,15 @@ namespace SCPI_Expert
         {
             try
             {
-                //ShowMessage();
-                //DevExpress.XtraSplashScreen.SplashScreenManager.ShowForm(typeof(ssConnecting));
                 ITcpipSession session = (ITcpipSession)GlobalResourceManager.Open(resourceName);
                 ibfIo = session.FormattedIO;
-                //HideMessage();
-                //DevExpress.XtraSplashScreen.SplashScreenManager.CloseForm(true);
-                lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Connect to the device successfully!:lvi.Visa.");
-                btnSend.Enabled = true;
-                btnRead.Enabled = true;
-                btnSR.Enabled = true;
-                btnConnect.Text = "Disconnect";
-                lblStatus.Text = "Connected to " + resourceName + "!";
+                ShowMsg("*[" + DateTime.Now.ToString() + "] " + "Connect to the device successfully!:lvi.Visa.");
             }
             catch
             {
-                //HideMessage();
-                //DevExpress.XtraSplashScreen.SplashScreenManager.CloseForm(true);
                 lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Can't connect to the device!:lvi.Visa.");
             }
         }
-
 
         /// <summary>
         /// 发送SCPI指令
@@ -264,19 +283,18 @@ namespace SCPI_Expert
                 try
                 {
                     ibfIo.PrintfAndFlush(command);
-                    lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Send:" + command);
+                    lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Send: " + command);
                 }
                 catch (Exception)
                 {
-                    lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Error:Can't send command");
+                    lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Error: Can't send command");
                 }
             }
             else
             {
-                lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Error:Disconnect");
+                lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Error: Disconnect");
             }
         }
-
 
         /// <summary>
         /// 查询回读信息
@@ -288,19 +306,18 @@ namespace SCPI_Expert
             {
                 try
                 {
-                    lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Read:" + ibfIo.ReadLine());
+                    lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Read: " + ibfIo.ReadLine());
                 }
                 catch (Exception)
                 {
-                    lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Error:No return infomation");
+                    lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Error: No return infomation");
                 }
             }
             else
             {
-                lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Error:Disconnect");
+                lbxReception.Items.Add("*[" + DateTime.Now.ToString() + "] " + "Error: Disconnect");
             }
         }
-
 
         /// <summary>
         /// 关闭连接
@@ -309,11 +326,7 @@ namespace SCPI_Expert
         {
             if (ibfIo != null)
                 ibfIo = null;
-            btnConnect.Text = "Connect";
-            lblStatus.Text = "Disconnected";
-            btnConnect.Enabled = true;
         }
-
 
         /// <summary>
         /// 显示等待窗体
@@ -322,11 +335,8 @@ namespace SCPI_Expert
         {
             bool flag = !this.ssMgr.IsSplashFormVisible;
             if (flag)
-            {
                 this.ssMgr.ShowWaitForm();
-            }
         }
-
 
         /// <summary>
         /// 关闭等待窗体
@@ -335,11 +345,8 @@ namespace SCPI_Expert
         {
             bool isSplashFormVisible = this.ssMgr.IsSplashFormVisible;
             if (isSplashFormVisible)
-            {
                 this.ssMgr.CloseWaitForm();
-            }
         }
-
 
     }
 }
